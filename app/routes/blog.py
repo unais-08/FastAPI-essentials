@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Request, HTTPException, status
-from typing import List
+
 
 from app.schemas.blog import BlogCreate, BlogUpdate, BlogBase, BlogInDB
 from app.schemas.response import APIResponse, APIListResponse

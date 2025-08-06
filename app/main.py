@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from contextlib import asynccontextmanager
 from app.db.connection import create_db_pool
-from app.routes import blog
+from app.routes import blog, user
 
 
 @asynccontextmanager
@@ -21,4 +21,6 @@ def index():
     return {"message": "hello from FastAPI"}
 
 
+app.include_router(user.router)
 app.include_router(blog.router)
+
