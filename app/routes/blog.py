@@ -7,7 +7,7 @@ from app.schemas.response import APIResponse, APIListResponse
 router = APIRouter(prefix="/blogs", tags=["Blogs"])
 
 
-@router.get("/", response_model=APIListResponse[BlogBase])
+@router.get("/", response_model=APIListResponse[BlogInDB])
 async def get_blogs(request: Request):
     db_pool = request.app.state.db_pool
     query = "SELECT * FROM blogs"
