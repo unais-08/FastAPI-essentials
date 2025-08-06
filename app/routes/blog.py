@@ -1,27 +1,31 @@
-from fastapi import APIRouter, Request, HTTPException
-from typing import Optional, Literal
-from app.schemas.blogs_schema import BlogCreate, BlogUpdate
+from fastapi import APIRouter, Request, HTTPException, status
+from typing import List
 
-router = APIRouter()
+from app.schemas.blog import BlogCreate, BlogUpdate, BlogBase, BlogInDB
+from app.schemas.response import APIResponse, APIListResponse
+
+router = APIRouter(prefix="/blogs", tags=["Blogs"])
 
 
-@router.get("/blogs")
-async def retrieve_blogs(
-    request: Request,
-    published: Optional[bool] = None,
-    limit: Optional[int] = None,
-    sort: Literal["asc", "desc"] = "asc",
-):
+@router.get("/", response_model=APIListResponse[BlogBase])
+async def get_blogs(request: Request):
     db_pool = request.app.state.db_pool
     query = "SELECT * FROM blogs"
 
     async with db_pool.acquire() as conn:
         rows = await conn.fetch(query)
+        blogs = [dict(row) for row in rows]
 
-    return [dict(row) for row in rows]
+    return {
+        "success": True,
+        "message": "Blogs retrieved successfully",
+        "data": blogs,
+    }
 
 
-@router.post("/blogs")
+@router.post(
+    "/", status_code=status.HTTP_201_CREATED, response_model=APIResponse[BlogInDB]
+)
 async def create_blog(request: Request, blog: BlogCreate):
     db_pool = request.app.state.db_pool
 
@@ -33,28 +37,35 @@ async def create_blog(request: Request, blog: BlogCreate):
 
     async with db_pool.acquire() as conn:
         row = await conn.fetchrow(
-            query, blog.title, blog.content, blog.author, blog.published, blog.tags
+            query,
+            blog.title,
+            blog.content,
+            blog.author,
+            blog.published,
+            blog.tags,
         )
 
-    return dict(row)
+    return {
+        "success": True,
+        "message": "Blog created successfully",
+        "data": dict(row),
+    }
 
 
-@router.put("/blogs/{blog_id}")
-async def edit_blog(request: Request, blog_id: int, blog: BlogUpdate):
+@router.put("/{blog_id}", response_model=APIResponse[BlogInDB])
+async def update_blog(request: Request, blog_id: int, blog: BlogUpdate):
     db_pool = request.app.state.db_pool
 
-    # Fetch existing blog
     async with db_pool.acquire() as conn:
+        # Check if blog exists
         existing = await conn.fetchrow("SELECT * FROM blogs WHERE id = $1", blog_id)
         if not existing:
             raise HTTPException(status_code=404, detail="Blog not found")
 
-        # Prepare updated fields, fallback to existing if not provided
-        updated_title = blog.title if blog.title is not None else existing["title"]
-        updated_content = (
-            blog.content if blog.content is not None else existing["content"]
-        )
-        updated_author = blog.author if blog.author is not None else existing["author"]
+        # Merge updates
+        updated_title = blog.title or existing["title"]
+        updated_content = blog.content or existing["content"]
+        updated_author = blog.author or existing["author"]
         updated_published = (
             blog.published if blog.published is not None else existing["published"]
         )
@@ -77,10 +88,14 @@ async def edit_blog(request: Request, blog_id: int, blog: BlogUpdate):
             blog_id,
         )
 
-    return dict(row)
+    return {
+        "success": True,
+        "message": "Blog updated successfully",
+        "data": dict(row),
+    }
 
 
-@router.delete("/blogs/{blog_id}")
+@router.delete("/{blog_id}", response_model=APIResponse[dict])
 async def delete_blog(request: Request, blog_id: int):
     db_pool = request.app.state.db_pool
 
@@ -88,7 +103,12 @@ async def delete_blog(request: Request, blog_id: int):
 
     async with db_pool.acquire() as conn:
         row = await conn.fetchrow(query, blog_id)
+
         if not row:
             raise HTTPException(status_code=404, detail="Blog not found")
 
-    return {"message": "Blog deleted", "id": row["id"]}
+    return {
+        "success": True,
+        "message": "Blog deleted successfully",
+        "data": {"id": row["id"]},
+    }
