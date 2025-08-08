@@ -13,8 +13,12 @@ class BlogBase(BaseModel):
     tags: Optional[List[str]] = []
 
 
+# === 🔹 Blog Create ===
 class BlogCreate(BlogBase):
     pass
+
+
+# === 🔹 Blog Update ===
 
 
 class BlogUpdate(BaseModel):
@@ -23,6 +27,9 @@ class BlogUpdate(BaseModel):
     author: Optional[str] = None
     published: Optional[bool] = None
     tags: Optional[List[str]] = None
+
+
+# === 🔹 Blog save in DB ===
 
 
 class BlogInDB(BlogBase):
